@@ -25,8 +25,9 @@
  */
 package org.alfresco.repo.web.scripts.wiki;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,18 +44,15 @@ import org.alfresco.service.cmr.site.SiteService;
 import org.alfresco.service.cmr.wiki.WikiPageInfo;
 import org.alfresco.service.cmr.wiki.WikiService;
 import org.alfresco.util.ScriptPagingDetails;
+import org.alfresco.util.json.jackson.AlfrescoDefaultObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 import org.springframework.extensions.surf.util.URLEncoder;
 import org.springframework.extensions.webscripts.Cache;
 import org.springframework.extensions.webscripts.DeclarativeWebScript;
 import org.springframework.extensions.webscripts.Status;
 import org.springframework.extensions.webscripts.WebScriptException;
 import org.springframework.extensions.webscripts.WebScriptRequest;
-import org.springframework.extensions.webscripts.json.JSONWriter;
 
 /**
  * @author Nick Burch
@@ -103,16 +101,6 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
         this.activityService = activityService;
     }
     
-    
-    protected String getOrNull(JSONObject json, String key)
-    {
-       if (json.containsKey(key))
-       {
-          return (String)json.get(key);
-       }
-       return null;
-    }
-    
     /**
      * Builds up a listing Paging request, based on the arguments
      *  specified in the URL
@@ -123,7 +111,7 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
     }
     
     protected void addActivityEntry(String event, WikiPageInfo wikiPage, SiteInfo site, 
-            WebScriptRequest req, JSONObject json)
+            WebScriptRequest req, JsonNode json)
     {
         addActivityEntry(event, wikiPage, site, req, json, Collections.<String, String>emptyMap());
     }
@@ -135,21 +123,20 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
      * @param wikiPage the wiki page generating the activity.
      * @param site     the site in which the wiki page was created.
      * @param req      the {@link WebScriptRequest}.
-     * @param json JSONObject
      * @param additionalData any additional data required for the activity.
      */
     protected void addActivityEntry(String event,
             WikiPageInfo wikiPage, SiteInfo site, 
-            WebScriptRequest req, JSONObject json,
+            WebScriptRequest req, JsonNode json,
             Map<String, String> additionalData)
     {
        // What page is this for?
        String page = req.getParameter("page");
        if (page == null && json != null)
        {
-          if (json.containsKey("page"))
+          if (json.has("page"))
           {
-             page = (String)json.get("page");
+             page = json.get("page").textValue();
           }
        }
        if (page == null)
@@ -160,22 +147,19 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
        
        try
        {
-          StringWriter activityJson = new StringWriter();
-          JSONWriter activity = new JSONWriter(activityJson);
-          activity.startObject();
-          activity.writeValue("title", wikiPage.getTitle());
-          activity.writeValue("page", page + "?title=" + URLEncoder.encodeUriComponent(wikiPage.getTitle()));
-          for (Map.Entry<String, String> entry : additionalData.entrySet())
-          {
-              activity.writeValue(entry.getKey(), entry.getValue());
-          }
-          activity.endObject();
-          
-          activityService.postActivity(
+           ObjectNode activityJson = AlfrescoDefaultObjectMapper.createObjectNode();
+           activityJson.put("title", wikiPage.getTitle());
+           activityJson.put("page", page + "?title=" + URLEncoder.encodeUriComponent(wikiPage.getTitle()));
+           for (Map.Entry<String, String> entry : additionalData.entrySet())
+           {
+               activityJson.put(entry.getKey(), entry.getValue());
+           }
+
+           activityService.postActivity(
                 "org.alfresco.wiki.page-" + event,
                 site.getShortName(),
                 WIKI_SERVICE_ACTIVITY_APP_NAME,
-                activityJson.toString());
+                AlfrescoDefaultObjectMapper.writeValueAsString(activityJson));
        }
        catch (Exception e)
        {
@@ -245,7 +229,7 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
        
        
        // Parse the JSON, if supplied
-       JSONObject json = null;
+       JsonNode json = null;
        String contentType = req.getContentType();
        if (contentType != null && contentType.indexOf(';') != -1)
        {
@@ -253,12 +237,11 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
        }
        if (MimetypeMap.MIMETYPE_JSON.equals(contentType))
        {
-          JSONParser parser = new JSONParser();
           try
           {
-             json = (JSONObject)parser.parse(req.getContent().getContent());
+             json = AlfrescoDefaultObjectMapper.getReader().readTree(req.getContent().getContent());
           }
-          catch (IOException | ParseException io)
+          catch (IOException io)
           {
              throw new WebScriptException(Status.STATUS_BAD_REQUEST, "Invalid JSON: " + io.getMessage());
           }
@@ -273,17 +256,17 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
        }
        if (siteName == null && json != null)
        {
-          if (json.containsKey("siteid"))
+          if (json.has("siteid"))
           {
-             siteName = (String)json.get("siteid");
+             siteName = json.get("siteid").textValue();
           }
-          else if (json.containsKey("siteId"))
+          else if (json.has("siteId"))
           {
-             siteName = (String)json.get("siteId");
+             siteName = json.get("siteId").textValue();
           }
-          else if(json.containsKey("site"))
+          else if(json.has("site"))
           {
-             siteName = (String)json.get("site");
+             siteName = json.get("site").textValue();
           }
        }
        if (siteName == null)
@@ -306,6 +289,6 @@ public abstract class AbstractWikiWebScript extends DeclarativeWebScript
     }
     
     protected abstract Map<String, Object> executeImpl(SiteInfo site, 
-          String pageTitle, WebScriptRequest req, JSONObject json, 
+          String pageTitle, WebScriptRequest req, JsonNode json,
           Status status, Cache cache);
 }

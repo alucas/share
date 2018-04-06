@@ -20,13 +20,13 @@ function main() {
       var valid = true;
       var name = json.get("name");
       var def = json.get("json");
-      if (name == null || name == "")
+      if (name == null || name.textValue() == null || name == "")
       {
          status.code = 500;
          model.errorMessage = "page.create.error.noNameProvided";
          return false;
       }
-
+      name = name.textValue();
       // Check to see if the page name is already in use...
       alfQuery = 'TYPE:"{http://www.alfresco.org/model/surf/1.0}amdpage"' +
                  ' AND PATH:"/app:company_home/app:dictionary//*"' +
@@ -48,7 +48,7 @@ function main() {
          model.errorMessageArg = def;
          return false;
       }
-   
+
       try
       {
          pageDetails = jsonUtils.toObject(def);
@@ -63,7 +63,7 @@ function main() {
       
       // Get the page name and it's content...
       var pageDefinitionName = name;
-      var pageDefinitionJSON = def; 
+      var pageDefinitionJSON = def.toString();
       var doc = shareResources.createNode(pageDefinitionName, "surf:amdpage");
       if (doc == null)
       {

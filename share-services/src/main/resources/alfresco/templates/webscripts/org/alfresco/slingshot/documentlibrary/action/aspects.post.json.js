@@ -12,7 +12,7 @@ function jsonToArray(p_name)
    if (json.has(p_name))
    {
       var jsonArray = json.get(p_name);
-      for (var i = 0, ii = jsonArray.length(); i < ii; i++)
+      for (var i = 0, ii = jsonArray.size(); i < ii; i++)
       {
          array.push(jsonArray.get(i));
       }
@@ -54,20 +54,20 @@ function runAction(p_params)
       // Aspects to be removed
       for (i = 0, ii = removed.length; i < ii; i++)
       {
-         if (assetNode.hasAspect(removed[i]))
+         if (assetNode.hasAspect(removed[i].textValue()))
          {
-            assetNode.removeAspect(removed[i]);
-            isTaggable = isTaggable || (removed[i] == "cm:taggable");
+            assetNode.removeAspect(removed[i].textValue());
+            isTaggable = isTaggable || (removed[i].textValue() == "cm:taggable");
          }
       }
 
       // Aspects to be added
       for (i = 0, ii = added.length; i < ii; i++)
       {
-         if (!assetNode.hasAspect(added[i]))
+         if (!assetNode.hasAspect(added[i].textValue()))
          {
-            assetNode.addAspect(added[i]);
-            isTaggable = isTaggable || (added[i] == "cm:taggable");
+            assetNode.addAspect(added[i].textValue());
+            isTaggable = isTaggable || (added[i].textValue() == "cm:taggable");
          }
       }
 

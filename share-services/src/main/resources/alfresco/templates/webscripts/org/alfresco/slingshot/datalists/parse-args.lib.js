@@ -181,8 +181,8 @@ var ParseArgs =
          {
             filter =
             {
-               filterId: filterJSON.get("filterId"),
-               filterData: filterJSON.get("filterData")
+               filterId: filterJSON.get("filterId").textValue(),
+               filterData: filterJSON.get("filterData").textValue()
             }
          }
          else

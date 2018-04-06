@@ -41,7 +41,7 @@ function main() {
          
          targetPage.addAspect("cm:versionable");
          var workingCopy = targetPage.checkout();
-         var pageDefinitionJSON = def;
+         var pageDefinitionJSON = def.toString();
          workingCopy.content = pageDefinitionJSON;
          targetPage = workingCopy.checkin();
          return true;

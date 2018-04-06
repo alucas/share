@@ -25,6 +25,9 @@
  */
 package org.alfresco.repo.web.scripts.permission;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.HashSet;
 
 import org.alfresco.model.ContentModel;
@@ -45,9 +48,7 @@ import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
 import org.alfresco.util.GUID;
 import org.alfresco.util.PropertyMap;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONException;
+import org.alfresco.util.json.jackson.AlfrescoDefaultObjectMapper;
 import org.springframework.extensions.webscripts.Status;
 import org.springframework.extensions.webscripts.TestWebScriptServer.GetRequest;
 import org.springframework.extensions.webscripts.TestWebScriptServer.PostRequest;
@@ -125,19 +126,19 @@ public class PermissionServiceTest extends BaseWebScriptTest
         //  "isInherited":true}
         
         /*  negative test, we are first deleting the coordinator role and then try to add consumer */
-        JSONObject changePermission = new JSONObject();
-        JSONArray permissions = new JSONArray();
+        ObjectNode changePermission = AlfrescoDefaultObjectMapper.createObjectNode();
+        ArrayNode permissions = AlfrescoDefaultObjectMapper.createArrayNode();
         // First delete permission, then add
-        JSONObject addPermission = new JSONObject();
+        ObjectNode addPermission = AlfrescoDefaultObjectMapper.createObjectNode();
         addPermission.put("authority", USER_ONE);
         addPermission.put("role", PermissionService.CONSUMER);
-        JSONObject removePermission = new JSONObject();
+        ObjectNode removePermission = AlfrescoDefaultObjectMapper.createObjectNode();
         removePermission.put("authority", USER_ONE);
         removePermission.put("role", PermissionService.COORDINATOR);
         removePermission.put("remove","true");
-        permissions.put(removePermission);
-        permissions.put(addPermission);
-        changePermission.put("permissions", permissions);
+        permissions.add(removePermission);
+        permissions.add(addPermission);
+        changePermission.set("permissions", permissions);
         changePermission.put("isInherited", "true");
         
         sendRequest(new PostRequest(URL_DOCLIB_PERMISSIONS +
@@ -146,25 +147,27 @@ public class PermissionServiceTest extends BaseWebScriptTest
                 "/" + folderRef.getId(),  changePermission.toString(), "application/json"), Status.STATUS_INTERNAL_SERVER_ERROR);  
         
         /*  positive test  */
-        changePermission = new JSONObject();
-        permissions = new JSONArray();
+        changePermission = AlfrescoDefaultObjectMapper.createObjectNode();
+        permissions = AlfrescoDefaultObjectMapper.createArrayNode();
         // First add permission, then delete
-        addPermission = new JSONObject();
+        addPermission = AlfrescoDefaultObjectMapper.createObjectNode();
         addPermission.put("authority", USER_ONE);
         addPermission.put("role", PermissionService.CONSUMER);
-        removePermission = new JSONObject();
+        removePermission = AlfrescoDefaultObjectMapper.createObjectNode();
         removePermission.put("authority", USER_ONE);
         removePermission.put("role", PermissionService.COORDINATOR);
         removePermission.put("remove","true");
-        permissions.put(addPermission);
-        permissions.put(removePermission);
-        changePermission.put("permissions", permissions);
+        permissions.add(addPermission);
+        permissions.add(removePermission);
+        changePermission.set("permissions", permissions);
         changePermission.put("isInherited", "true");
         
         sendRequest(new PostRequest(URL_DOCLIB_PERMISSIONS +
                 "/" + StoreRef.STORE_REF_WORKSPACE_SPACESSTORE.getProtocol() +
                 "/" + StoreRef.STORE_REF_WORKSPACE_SPACESSTORE.getIdentifier() +
-                "/" + folderRef.getId(),  changePermission.toString(), "application/json"), Status.STATUS_OK);   
+                "/" + folderRef.getId(),
+                AlfrescoDefaultObjectMapper.writeValueAsString(changePermission),
+                "application/json"), Status.STATUS_OK);
         
         AccessStatus accessStatus = permissionService.hasPermission(folderRef, PermissionService.CONSUMER);
         assertTrue("The permission was not set correctly", accessStatus == AccessStatus.ALLOWED);
@@ -245,14 +248,14 @@ public class PermissionServiceTest extends BaseWebScriptTest
                 new GetRequest(URL_DOCLIB_PERMISSIONS + "/" + StoreRef.STORE_REF_WORKSPACE_SPACESSTORE.getProtocol() + "/"
                         + StoreRef.STORE_REF_WORKSPACE_SPACESSTORE.getIdentifier() + "/" + folder3.getId()), Status.STATUS_OK);
         
-        JSONObject jsonResponse = new JSONObject(response.getContentAsString());
+        JsonNode jsonResponse = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
         
         //Check if the request returns duplicate direct permissions
         HashSet<AccessPermission> directPermissions = new HashSet<>();
-        JSONArray directPermissionsArray = jsonResponse.getJSONArray("direct");
-        for (int i = 0; i < directPermissionsArray.length(); i++)
+        ArrayNode directPermissionsArray = (ArrayNode) jsonResponse.get("direct");
+        for (int i = 0; i < directPermissionsArray.size(); i++)
         {
-            AccessPermission permission = new AccessPermission(directPermissionsArray.getJSONObject(i));
+            AccessPermission permission = new AccessPermission(directPermissionsArray.get(i));
             
             assertTrue(directPermissions.add(permission));
         }
@@ -263,10 +266,10 @@ public class PermissionServiceTest extends BaseWebScriptTest
 
         // Check if the request returns duplicate inherited permissions
         HashSet<AccessPermission> inheritedPermissions = new HashSet<>();
-        JSONArray inheritedPermissionsArray = jsonResponse.getJSONArray("inherited");
-        for (int i = 0; i < inheritedPermissionsArray.length(); i++)
+        ArrayNode inheritedPermissionsArray = (ArrayNode) jsonResponse.get("inherited");
+        for (int i = 0; i < inheritedPermissionsArray.size(); i++)
         {
-            AccessPermission permission = new AccessPermission(inheritedPermissionsArray.getJSONObject(i));
+            AccessPermission permission = new AccessPermission(inheritedPermissionsArray.get(i));
             if (USER_TWO.equals(permission.getAuthority().getName()) && PermissionService.CONTRIBUTOR.equals(permission.getRole()))
             {
                 denyPermissionInheritedTest = permission;
@@ -293,10 +296,10 @@ class AccessPermission
     private PermissionAuthority authority;
     private String role;
 
-    public AccessPermission(JSONObject jsonPermission) throws JSONException
+    public AccessPermission(JsonNode jsonPermission)
     {
-        authority = new PermissionAuthority(jsonPermission.getJSONObject("authority"));
-        role = jsonPermission.getString("role");
+        authority = new PermissionAuthority(jsonPermission.get("authority"));
+        role = jsonPermission.get("role").textValue();
     }
 
     public PermissionAuthority getAuthority()
@@ -332,10 +335,10 @@ class PermissionAuthority
     private String name;
     private String displayName;
 
-    public PermissionAuthority(JSONObject jsonAuth) throws JSONException
+    public PermissionAuthority(JsonNode jsonAuth)
     {
-        name = jsonAuth.getString("name");
-        displayName = jsonAuth.getString("displayName");
+        name = jsonAuth.get("name").textValue();
+        displayName = jsonAuth.get("displayName").textValue();
     }
 
     public String getName()

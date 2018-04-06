@@ -25,12 +25,14 @@
  */
 package org.alfresco.repo.jscript;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import org.alfresco.repo.jscript.app.CustomResponse;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-import java.io.Serializable;
 import java.util.Map;
+import org.alfresco.util.json.jackson.AlfrescoDefaultObjectMapper;
 
 /**
  * Populates DocLib webscript response with custom metadata output
@@ -56,9 +58,9 @@ public final class SlingshotDocLibCustomResponse extends BaseScopableProcessorEx
      *
      * @return The JSON string
      */
-    public String getJSON()
+    public String getJSON() throws JsonProcessingException
     {
-        return this.getJSONObj().toString();
+        return AlfrescoDefaultObjectMapper.writeValueAsString(this.getJSONObj());
     }
 
     /**
@@ -66,24 +68,15 @@ public final class SlingshotDocLibCustomResponse extends BaseScopableProcessorEx
      *
      * @return The JSON object
      */
-    protected Object getJSONObj()
+    protected ObjectNode getJSONObj() throws JsonProcessingException
     {
-        JSONObject json = new JSONObject();
-
-
+        ObjectNode json = AlfrescoDefaultObjectMapper.createObjectNode();
         for (Map.Entry<String, Object> entry : this.customResponses.entrySet())
         {
-            try
-            {
-                Serializable response = ((CustomResponse) entry.getValue()).populate();
-                json.put(entry.getKey(), response == null ? JSONObject.NULL: response);
-            }
-            catch (JSONException error)
-            {
-                error.printStackTrace();
-            }
+            String response = AlfrescoDefaultObjectMapper
+                    .writeValueAsString(((CustomResponse) entry.getValue()).populate());
+            json.set(entry.getKey(), response == null ? NullNode.getInstance(): TextNode.valueOf(response));
         }
-
         return json;
     }
 }

@@ -23,7 +23,7 @@ function postActivity()
    {
       type = json.get("type");
    }
-   if (type == null || type.length === 0)
+   if (type == null || type.textValue() == null || type.textValue().length === 0)
    {
       status.setCode(status.STATUS_BAD_REQUEST, "Activity 'type' parameter missing when posting activity");
       return;
@@ -36,15 +36,15 @@ function postActivity()
    {
       siteId = json.get("site");
    }
-   if (siteId == null || siteId.length === 0)
+   if (siteId == null || siteId.textValue() == null || siteId.textValue().length === 0)
    {
       status.setCode(status.STATUS_BAD_REQUEST, "'site' parameter missing when posting activity");
       return;
    }
    // Check site existence
-   if (siteService.getSite(siteId) == null)
+   if (siteService.getSite(siteId.textValue()) == null)
    {
-      status.setCode(status.STATUS_BAD_REQUEST, "'" + siteId + "' is not a valid site");
+      status.setCode(status.STATUS_BAD_REQUEST, "'" + siteId.textValue() + "' is not a valid site");
       return;
    }
    
@@ -53,13 +53,13 @@ function postActivity()
     */
    if (json.has("nodeRef"))
    {
-      nodeRef = json.get("nodeRef");
+      nodeRef = json.get("nodeRef").textValue();
       data.nodeRef = nodeRef;
       m_node = search.findNode(nodeRef);
    }
    if (json.has("parentNodeRef"))
    {
-      parentNodeRef = json.get("parentNodeRef");
+      parentNodeRef = json.get("parentNodeRef").textValue();
       data.parentNodeRef = parentNodeRef;
       m_parentNode = search.findNode(parentNodeRef);
    }
@@ -74,7 +74,7 @@ function postActivity()
     */
    if (json.has("title"))
    {
-      title = json.get("title");
+      title = json.get("title").textValue();
       data.title = populateTokens(title);
    }
    if (title == null || title.length === 0)
@@ -88,7 +88,7 @@ function postActivity()
     */
    if (json.has("appTool"))
    {
-      appTool = json.get("appTool");
+      appTool = json.get("appTool").textValue();
    }
 
    /**
@@ -96,7 +96,7 @@ function postActivity()
     */
    if (json.has("page"))
    {
-      data.page = populateTokens(json.get("page"));
+      data.page = populateTokens(json.get("page").intValue());
    }
 
    try 

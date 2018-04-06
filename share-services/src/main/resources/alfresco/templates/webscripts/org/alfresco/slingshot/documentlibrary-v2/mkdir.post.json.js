@@ -12,11 +12,11 @@ function main()
    // get params and check destination nodeRef exists
    if (json.has("destination"))
    {
-      var destination = json.get("destination");
+      var destination = json.get("destination").textValue();
    }
    if (json.has("paths"))
    {
-      var paths = json.get("paths");
+      var paths = json.get("paths").textValue();
    }
    if (!destination || !paths)
    {

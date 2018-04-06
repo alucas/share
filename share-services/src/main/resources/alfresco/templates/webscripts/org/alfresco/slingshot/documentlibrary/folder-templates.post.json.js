@@ -6,13 +6,13 @@ function main()
    // get the arguments - expecting the "sourceNodeRef" and "parentNodeRef" of the source node to copy
    // and the parent node to contain the new copy of the source.
    var sourceNodeRef = json.get("sourceNodeRef");
-   if (sourceNodeRef == null || sourceNodeRef.length === 0)
+   if (sourceNodeRef == null || sourceNodeRef.textValue() == null || sourceNodeRef.textValue().length === 0)
    {
       status.setCode(status.STATUS_BAD_REQUEST, "Mandatory 'sourceNodeRef' parameter missing.");
       return;
    }
    var parentNodeRef = json.get("parentNodeRef");
-   if (parentNodeRef == null || parentNodeRef.length === 0)
+   if (parentNodeRef == null || parentNodeRef.textValue() == null || parentNodeRef.textValue().length === 0)
    {
       status.setCode(status.STATUS_BAD_REQUEST, "Mandatory 'parentNodeRef' parameter missing.");
       return;
@@ -26,12 +26,12 @@ function main()
       status.setCode(status.STATUS_NOT_FOUND, "Source or destination node is missing for copy operation.");
    }
    var copy = sourceNode.copy(parentNode, true);
-   copy.setName(json.get("prop_cm_name").toString());
-   copy.properties["cm:description"] = json.get("prop_cm_description").toString();
-   copy.properties["cm:title"] = json.get("prop_cm_title").toString();
+   copy.setName(json.get("prop_cm_name").textValue());
+   copy.properties["cm:description"] = json.get("prop_cm_description").textValue();
+   copy.properties["cm:title"] = json.get("prop_cm_title").textValue();
    copy.save();
    model.persistedObject = copy.getNodeRef().toString();
-   model.name = json.get("prop_cm_name").toString();
+   model.name = json.get("prop_cm_name").textValue();
 }
 
 main();

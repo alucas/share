@@ -25,6 +25,7 @@
  */
 package org.alfresco.repo.web.scripts.wiki;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -41,7 +42,6 @@ import org.alfresco.service.cmr.repository.TemplateService;
 import org.alfresco.service.cmr.site.SiteInfo;
 import org.alfresco.service.cmr.wiki.WikiPageInfo;
 import org.alfresco.util.UrlUtil;
-import org.json.simple.JSONObject;
 import org.springframework.extensions.webscripts.Cache;
 import org.springframework.extensions.webscripts.Status;
 import org.springframework.extensions.webscripts.WebScriptRequest;
@@ -67,7 +67,8 @@ public class WikiPageListGet extends AbstractWikiWebScript
    
    @Override
    protected Map<String, Object> executeImpl(SiteInfo site, String pageTitle,
-         WebScriptRequest req, JSONObject json, Status status, Cache cache) 
+                                             WebScriptRequest req, JsonNode json,
+                                             Status status, Cache cache)
    {
       // Decide on what kind of request they wanted
       String filter = req.getParameter("filter");

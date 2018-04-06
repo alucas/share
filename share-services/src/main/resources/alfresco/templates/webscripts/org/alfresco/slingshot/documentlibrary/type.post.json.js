@@ -19,7 +19,7 @@ function main()
       return null;
    }
    
-   var type = json.get("type");
+   var type = json.get("type").textValue();
    
    if (!node.specializeType(type))
    {

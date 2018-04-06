@@ -27,7 +27,7 @@ function postActivity()
     * Activity Type
     */
    var type = json.get("type");
-   if (type == null || type.length === 0)
+   if (type == null || type.textValue() == null || type.textValue().length === 0)
    {
       status.setCode(status.STATUS_BAD_REQUEST, "Activity 'type' parameter missing when posting activity");
       return;
@@ -37,7 +37,7 @@ function postActivity()
     * Site
     */
    var siteId = json.get("site");
-   if (siteId == null || siteId.length === 0)
+   if (siteId == null || siteId.textValue() == null || siteId.textValue().length === 0)
    {
       status.setCode(status.STATUS_BAD_REQUEST, "'site' parameter missing when posting activity");
       return;
@@ -57,7 +57,7 @@ function postActivity()
    
    if (json.has("nodeRef"))
    {
-      nodeRef = json.get("nodeRef");
+      nodeRef = json.get("nodeRef").textValue();
       if (!isNodeRef(nodeRef))
       {
          status.setCode(status.STATUS_BAD_REQUEST, "'" + nodeRef + "' is not a valid NodeRef");
@@ -66,7 +66,7 @@ function postActivity()
    }
    if (json.has("parentNodeRef"))
    {
-      parentNodeRef = json.get("parentNodeRef");
+      parentNodeRef = json.get("parentNodeRef").textValue();
       if (!isNodeRef(parentNodeRef))
       {
          status.setCode(status.STATUS_BAD_REQUEST, "'" + parentNodeRef + "' is not a valid parent NodeRef");
@@ -86,7 +86,7 @@ function postActivity()
       case "file-downloaded":
       case "folder-liked":
       case "inline-edit":
-         data.title = json.get("fileName");
+         data.title = json.get("fileName").textValue();
          data.nodeRef = nodeRef;
          strParams = "?nodeRef=" + nodeRef;
          break;
@@ -95,8 +95,8 @@ function postActivity()
       case "files-deleted":
       case "files-updated":
       case "folders-deleted":
-         data.title = json.get("fileCount");
-         strParams = "?path=" + json.get("path");
+         data.title = json.get("fileCount").asText();
+         strParams = "?path=" + json.get("path").textValue();
          if (parentNodeRef != null)
          {
             data.parentNodeRef = parentNodeRef;
@@ -106,9 +106,9 @@ function postActivity()
       case "file-deleted":
       case "folder-added":
       case "folder-deleted":
-         data.title = json.get("fileName");
+         data.title = json.get("fileName").textValue();
          data.nodeRef = nodeRef;
-         strParams = "?path=" + json.get("path");
+         strParams = "?path=" + json.get("path").textValue();
          if (parentNodeRef != null)
          {
             data.parentNodeRef = parentNodeRef;
@@ -123,7 +123,7 @@ function postActivity()
    try 
    {
       // Log to activity service
-      data.page = json.get("page") + strParams;
+      data.page = json.get("page").asText() + strParams;
       activities.postActivity("org.alfresco.documentlibrary." + type, siteId, "documentlibrary", jsonUtils.toJSONString(data));
    }
    catch(e)

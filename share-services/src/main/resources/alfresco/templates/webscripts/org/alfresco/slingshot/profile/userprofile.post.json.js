@@ -29,7 +29,7 @@ function main()
       status.redirect = true;
       return;
    }
-   
+   username = username.textValue();
    var user = people.getPerson(username);
    // ensure we found a valid user and that it is the current user or we are an admin
    if (user == null ||
@@ -46,14 +46,14 @@ function main()
       var props = json.get("properties");
       if (props != null)
       {
-         var names = props.names();
-         for (var i=0; i<props.length(); i++)
+         var names = props.fieldNames();
+         for ( ; names.hasNext(); )
          {
-            var propname = names.get(i);
+            var propname = names.next();
             var propval = props.get(propname);
             
             // set simple text properties
-            user.properties[propname] = propval;
+            user.properties[propname] = propval.asText();
             
             // update userStatusTime if updating userStatus
             if (propname.toLowerCase() == "cm:userstatus")
@@ -69,11 +69,11 @@ function main()
       var props = json.get("content");
       if (props != null)
       {
-         var names = props.names();
-         for (var i=0; i<props.length(); i++)
+         var names = props.fieldNames();
+         for ( ; names.hasNext(); )
          {
-            var propname = names.get(i);
-            var propval = props.get(propname);
+            var propname = names.mext();
+            var propval = props.get(propname).asText();
             
             // set content property
             user.properties[propname].content = propval;

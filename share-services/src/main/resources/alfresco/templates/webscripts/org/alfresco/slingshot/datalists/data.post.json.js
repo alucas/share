@@ -44,11 +44,11 @@ function getData()
       // Convert the JSONArray object into a native JavaScript array
       fields = [];
       var jsonFields = json.get("fields"),
-         numFields = jsonFields.length();
+         numFields = jsonFields.size();
       
       for (count = 0; count < numFields; count++)
       {
-         fields.push(jsonFields.get(count).replaceFirst("_", ":"));
+         fields.push(jsonFields.get(count).textValue().replaceFirst("_", ":"));
       }
    }
 

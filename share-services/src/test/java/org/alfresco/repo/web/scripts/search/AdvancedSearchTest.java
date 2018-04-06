@@ -25,6 +25,7 @@
  */
 package org.alfresco.repo.web.scripts.search;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.List;
 
@@ -40,8 +41,7 @@ import org.alfresco.service.cmr.repository.StoreRef;
 import org.alfresco.service.cmr.search.SearchService;
 import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.transaction.TransactionService;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.alfresco.util.json.jackson.AlfrescoDefaultObjectMapper;
 import org.junit.Ignore;
 import org.springframework.extensions.webscripts.Status;
 import org.springframework.extensions.webscripts.TestWebScriptServer.GetRequest;
@@ -130,21 +130,21 @@ public class AdvancedSearchTest extends BaseWebScriptTest
         this.authenticationComponent.clearCurrentSecurityContext();
     }
     
-    public void testSearchFile() throws IOException, JSONException
+    public void testSearchFile() throws IOException
     {
         //Name search without quotes
         String url = "/slingshot/search?site=&term=&tag=&maxResults=251&sort=&query={\"prop_cm_name\":\"" + SEARCH_NAME + "\",\"datatype\":\"cm:content\"}&repo=true&rootNode=alfresco://company/home";
         Response res =  sendRequest(new GetRequest(url), Status.STATUS_OK);
-        JSONObject result = new JSONObject(res.getContentAsString());
-        assertEquals(2, result.getInt("totalRecords"));
+        JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(res.getContentAsString());
+        assertEquals(2, result.get("totalRecords").intValue());
         
         url = "/slingshot/search?site=&term=&tag=&maxResults=251&sort=&query={\"prop_cm_name\":\"\\\"" + SEARCH_NAME + "\\\"\",\"datatype\":\"cm:content\"}&repo=true&rootNode=alfresco://company/home";
         res =  sendRequest(new GetRequest(url), Status.STATUS_OK);
-        result = new JSONObject(res.getContentAsString());
-        assertEquals(1, result.getInt("totalRecords"));
+        result = AlfrescoDefaultObjectMapper.getReader().readTree(res.getContentAsString());
+        assertEquals(1, result.get("totalRecords").intValue());
     }
 
-    public void testSearchInSites() throws IOException, JSONException
+    public void testSearchInSites() throws IOException
     {
     	List<NodeRef> results = searchService.selectNodes(this.rootNodeRef, "/app:company_home/st:sites", null, namespaceService, false);
         if (results.size() == 0)
@@ -161,8 +161,8 @@ public class AdvancedSearchTest extends BaseWebScriptTest
        // String url = "/slingshot/search?site=&term=" + SEARCH_NAME + "&tag=&maxResults=251&sort=&query=&repo=false&rootNode=alfresco%3A%2F%2Fcompany%2Fhome&pageSize=50&startIndex=0";
         String url = "/slingshot/search?site=&term=&tag=&maxResults=251&sort=&query={\"prop_cm_name\":\"" + SEARCH_IN_SITES + time + "\",\"datatype\":\"cm:content\"}&repo=true&rootNode=alfresco://company/home";
         Response res =  sendRequest(new GetRequest(url), Status.STATUS_OK);
-        JSONObject result = new JSONObject(res.getContentAsString());
-        assertEquals(1, result.getInt("totalRecords"));
+        JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(res.getContentAsString());
+        assertEquals(1, result.get("totalRecords").intValue());
         
         deleteNodeIfExists(nodeRef);
         deleteNodeIfExists(sitefolderNodeRef);

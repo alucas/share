@@ -25,6 +25,8 @@
  */
 package org.alfresco.slingshot.web.scripts;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.alfresco.model.ContentModel;
 import org.alfresco.repo.content.MimetypeMap;
 import org.alfresco.repo.model.Repository;
@@ -41,7 +43,7 @@ import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
 import org.alfresco.util.GUID;
 import org.alfresco.util.PropertyMap;
-import org.json.JSONObject;
+import org.alfresco.util.json.jackson.AlfrescoDefaultObjectMapper;
 import org.junit.Assert;
 import org.springframework.extensions.webscripts.TestWebScriptServer;
 import org.springframework.extensions.webscripts.TestWebScriptServer.GetRequest;
@@ -114,10 +116,10 @@ public class SlingshotContentGetTest extends BaseWebScriptTest
     }
 
 
-    private JSONObject createSite(String sitePreset, String shortName, String title, String description, SiteVisibility visibility, int expectedStatus)
+    private JsonNode createSite(String sitePreset, String shortName, String title, String description, SiteVisibility visibility, int expectedStatus)
             throws Exception
     {
-        JSONObject site = new JSONObject();
+        ObjectNode site = AlfrescoDefaultObjectMapper.createObjectNode();
         site.put("sitePreset", sitePreset);
         site.put("shortName", shortName);
         site.put("title", title);
@@ -125,7 +127,7 @@ public class SlingshotContentGetTest extends BaseWebScriptTest
         site.put("visibility", visibility.toString());
         TestWebScriptServer.Response response = sendRequest(new TestWebScriptServer.PostRequest(URL_SITES, site.toString(), "application/json"), expectedStatus);
         this.createdSites.add(shortName);
-        return new JSONObject(response.getContentAsString());
+        return AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
     }
 
     @Override

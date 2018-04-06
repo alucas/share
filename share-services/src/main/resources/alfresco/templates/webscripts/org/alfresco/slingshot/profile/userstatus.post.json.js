@@ -17,6 +17,7 @@ function main()
       var newStatus = json.get("status");
       if (newStatus != null)
       {
+         newStatus = newStatus.textValue();
          var statusTime = new Date();
          person.properties["cm:userStatus"] = newStatus;
          person.properties["cm:userStatusTime"] = statusTime;

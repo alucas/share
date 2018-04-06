@@ -25,6 +25,9 @@
  */
 package org.alfresco.repo.web.scripts.wiki;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -50,11 +53,10 @@ import org.alfresco.service.cmr.wiki.WikiPageInfo;
 import org.alfresco.service.cmr.wiki.WikiService;
 import org.alfresco.service.transaction.TransactionService;
 import org.alfresco.util.PropertyMap;
+import org.alfresco.util.json.jackson.AlfrescoDefaultObjectMapper;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.extensions.webscripts.Status;
 import org.springframework.extensions.webscripts.TestWebScriptServer.DeleteRequest;
 import org.springframework.extensions.webscripts.TestWebScriptServer.GetRequest;
@@ -214,7 +216,7 @@ public class WikiRestApiTest extends BaseWebScriptTest
     
     // Test helper methods
     
-    private JSONObject getPages(String filter, String username) throws Exception
+    private JsonNode getPages(String filter, String username) throws Exception
     {
        String origUser = this.authenticationComponent.getCurrentUserName();
        if (username != null)
@@ -232,7 +234,7 @@ public class WikiRestApiTest extends BaseWebScriptTest
        url += "&startIndex=0&page=1&pageSize=4";
        
        Response response = sendRequest(new GetRequest(url), 200);
-       JSONObject result = new JSONObject(response.getContentAsString());
+       JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
        
        if (username != null)
        {
@@ -242,21 +244,21 @@ public class WikiRestApiTest extends BaseWebScriptTest
        return result;
     }
     
-    private JSONObject getPage(String name, int expectedStatus) throws Exception
+    private JsonNode getPage(String name, int expectedStatus) throws Exception
     {
        Response response = sendRequest(new GetRequest(URL_WIKI_FETCH + name), expectedStatus);
        if (expectedStatus == Status.STATUS_OK)
        {
-          JSONObject result = new JSONObject(response.getContentAsString());
+          JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
           if (result.has("page"))
           {
-             return result.getJSONObject("page");
+             return result.get("page");
           }
           return result;
        }
        else if (expectedStatus == Status.STATUS_NOT_FOUND)
        {
-          JSONObject result = new JSONObject(response.getContentAsString());
+          JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
           return result;
        }
        else
@@ -289,7 +291,7 @@ public class WikiRestApiTest extends BaseWebScriptTest
     /**
      * Creates a single wiki page based on the supplied details
      */
-    private JSONObject createOrUpdatePage(String title, String contents, String version, int expectedStatus)
+    private JsonNode createOrUpdatePage(String title, String contents, String version, int expectedStatus)
     throws Exception
     {
        return createOrUpdatePage(null, title, contents, version, expectedStatus);
@@ -298,7 +300,7 @@ public class WikiRestApiTest extends BaseWebScriptTest
     /**
      * Creates a single wiki page based on the supplied details
      */
-    private JSONObject createOrUpdatePage(String pageName, String title, String contents, String version, int expectedStatus) throws Exception
+    private JsonNode createOrUpdatePage(String pageName, String title, String contents, String version, int expectedStatus) throws Exception
     {
         String name = null;
         if (pageName == null)
@@ -310,7 +312,7 @@ public class WikiRestApiTest extends BaseWebScriptTest
             name = pageName;
         }
 
-        JSONObject json = new JSONObject();
+        ObjectNode json = AlfrescoDefaultObjectMapper.createObjectNode();
         json.put("site", SITE_SHORT_NAME_WIKI);
         json.put("title", title);
         json.put("pagecontent", contents);
@@ -337,10 +339,10 @@ public class WikiRestApiTest extends BaseWebScriptTest
         Response response = sendRequest(new PutRequest(URL_WIKI_UPDATE + name, json.toString(), "application/json"), expectedStatus);
         if (expectedStatus == Status.STATUS_OK)
         {
-            JSONObject result = new JSONObject(response.getContentAsString());
+            JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
             if (result.has("page"))
             {
-                return result.getJSONObject("page");
+                return result.get("page");
             }
             return result;
         }
@@ -353,11 +355,11 @@ public class WikiRestApiTest extends BaseWebScriptTest
     /**
      * Renames the page
      */
-    private JSONObject renamePage(String oldTitle, String newTitle, int expectedStatus) throws Exception
+    private JsonNode renamePage(String oldTitle, String newTitle, int expectedStatus) throws Exception
     {
        String name = oldTitle.replace(' ', '_');
        
-       JSONObject json = new JSONObject();
+       ObjectNode json = AlfrescoDefaultObjectMapper.createObjectNode();
        json.put("site", SITE_SHORT_NAME_WIKI);
        json.put("name", newTitle);
        json.put("page", "wiki-page"); // TODO Is this really needed?
@@ -365,7 +367,7 @@ public class WikiRestApiTest extends BaseWebScriptTest
        Response response = sendRequest(new PostRequest(URL_WIKI_RENAME + name, json.toString(), "application/json"), expectedStatus);
        if (expectedStatus == Status.STATUS_OK)
        {
-          JSONObject result = new JSONObject(response.getContentAsString());
+          JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
           return result;
        }
        else
@@ -377,14 +379,14 @@ public class WikiRestApiTest extends BaseWebScriptTest
     /**
      * Deletes the page
      */
-    private JSONObject deletePage(String title, int expectedStatus) throws Exception
+    private JsonNode deletePage(String title, int expectedStatus) throws Exception
     {
        String name = title.replace(' ', '_');
        
        Response response = sendRequest(new DeleteRequest(URL_WIKI_DELETE + name), expectedStatus);
        if (expectedStatus == Status.STATUS_OK)
        {
-          JSONObject result = new JSONObject(response.getContentAsString());
+          JsonNode result = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
           return result;
        }
        else
@@ -426,15 +428,15 @@ public class WikiRestApiTest extends BaseWebScriptTest
      */
     public void testCreateEditDeleteEntry() throws Exception
     {
-       JSONObject page;
-       JSONObject permissions;
+       JsonNode page;
+       JsonNode permissions;
        String name;
        
        
        // None to start with
        page = getPages(null, null);
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("totalPages"));
-       assertEquals(0, page.getInt("totalPages"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("totalPages"));
+       assertEquals(0, page.get("totalPages").intValue());
        
        
        // Won't be there to start with
@@ -443,49 +445,49 @@ public class WikiRestApiTest extends BaseWebScriptTest
        // Create
        page = createOrUpdatePage(PAGE_TITLE_ONE, PAGE_CONTENTS_ONE, null, Status.STATUS_OK);
        name = PAGE_TITLE_ONE.replace(' ', '_');
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("title"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("title"));
        
-       assertEquals(name, page.getString("name"));
-       assertEquals(PAGE_TITLE_ONE, page.getString("title"));
-       assertEquals(PAGE_CONTENTS_ONE, page.getString("pagetext"));
-       assertEquals(0, page.getJSONArray("tags").length());
+       assertEquals(name, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_ONE, page.get("title").textValue());
+       assertEquals(PAGE_CONTENTS_ONE, page.get("pagetext").textValue());
+       assertEquals(0, page.get("tags").size());
 
        
        // Fetch
        page = getPage(name, Status.STATUS_OK);
        
-       assertEquals(name, page.getString("name"));
-       assertEquals(PAGE_TITLE_ONE, page.getString("title"));
-       assertEquals(PAGE_CONTENTS_ONE, page.getString("pagetext"));
-       assertEquals(0, page.getJSONArray("tags").length());
-       assertEquals(0, page.getJSONArray("links").length());
+       assertEquals(name, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_ONE, page.get("title").textValue());
+       assertEquals(PAGE_CONTENTS_ONE, page.get("pagetext").textValue());
+       assertEquals(0, page.get("tags").size());
+       assertEquals(0, page.get("links").size());
 
        // Check the permissions
-       assertEquals(true, page.has("permissions"));
-       permissions = page.getJSONObject("permissions");
-       assertEquals(true, permissions.getBoolean("create"));
-       assertEquals(true, permissions.getBoolean("edit"));
-       assertEquals(true, permissions.getBoolean("delete"));
+        assertTrue(page.has("permissions"));
+       permissions = page.get("permissions");
+        assertTrue(permissions.get("create").booleanValue());
+        assertTrue(permissions.get("edit").booleanValue());
+        assertTrue(permissions.get("delete").booleanValue());
        
        
        // Edit
        // We should get a simple message
        page = createOrUpdatePage(PAGE_TITLE_ONE, "M"+PAGE_CONTENTS_ONE, null, Status.STATUS_OK);
-       assertEquals(name, page.getString("name"));
-       assertEquals(PAGE_TITLE_ONE, page.getString("title"));
-       assertEquals("M"+PAGE_CONTENTS_ONE, page.getString("pagetext"));
-       assertEquals(0, page.getJSONArray("tags").length());
+       assertEquals(name, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_ONE, page.get("title").textValue());
+       assertEquals("M"+PAGE_CONTENTS_ONE, page.get("pagetext").textValue());
+       assertEquals(0, page.get("tags").size());
        
        
        
        // Fetch
        page = getPage(name, Status.STATUS_OK);
        
-       assertEquals(name, page.getString("name"));
-       assertEquals(PAGE_TITLE_ONE, page.getString("title"));
-       assertEquals("M"+PAGE_CONTENTS_ONE, page.getString("pagetext"));
-       assertEquals(0, page.getJSONArray("tags").length());
-       assertEquals(0, page.getJSONArray("links").length());
+       assertEquals(name, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_ONE, page.get("title").textValue());
+       assertEquals("M"+PAGE_CONTENTS_ONE, page.get("pagetext").textValue());
+       assertEquals(0, page.get("tags").size());
+       assertEquals(0, page.get("links").size());
        
        
        // Fetch as a different user, permissions different
@@ -493,18 +495,18 @@ public class WikiRestApiTest extends BaseWebScriptTest
        page = getPage(name, Status.STATUS_OK);
        
        // Check the basics
-       assertEquals(name, page.getString("name"));
-       assertEquals(PAGE_TITLE_ONE, page.getString("title"));
-       assertEquals("M"+PAGE_CONTENTS_ONE, page.getString("pagetext"));
-       assertEquals(0, page.getJSONArray("tags").length());
-       assertEquals(0, page.getJSONArray("links").length());
+       assertEquals(name, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_ONE, page.get("title").textValue());
+       assertEquals("M"+PAGE_CONTENTS_ONE, page.get("pagetext").textValue());
+       assertEquals(0, page.get("tags").size());
+       assertEquals(0, page.get("links").size());
        
        // Different user in the site, can edit but not delete
-       assertEquals(true, page.has("permissions"));
-       permissions = page.getJSONObject("permissions");
-       assertEquals(true, permissions.getBoolean("create"));
-       assertEquals(true, permissions.getBoolean("edit"));
-       assertEquals(false, permissions.getBoolean("delete"));
+        assertTrue(page.has("permissions"));
+       permissions = page.get("permissions");
+        assertTrue(permissions.get("create").booleanValue());
+        assertTrue(permissions.get("edit").booleanValue());
+        assertFalse(permissions.get("delete").booleanValue());
        
        this.authenticationComponent.setCurrentUser(USER_ONE);
 
@@ -518,11 +520,11 @@ public class WikiRestApiTest extends BaseWebScriptTest
        page = getPage(name, Status.STATUS_NOT_FOUND);
        
        // On a page that isn't there, you do get permissions
-       assertEquals(true, page.has("permissions"));
-       permissions = page.getJSONObject("permissions");
-       assertEquals(true, permissions.getBoolean("create"));
-       assertEquals(true, permissions.getBoolean("edit"));
-       assertEquals(false, permissions.has("delete")); // No delete for non existing page
+        assertTrue(page.has("permissions"));
+       permissions = page.get("permissions");
+        assertTrue(permissions.get("create").booleanValue());
+        assertTrue(permissions.get("edit").booleanValue());
+        assertFalse(permissions.has("delete")); // No delete for non existing page
        
        
        // Can't delete again
@@ -531,7 +533,7 @@ public class WikiRestApiTest extends BaseWebScriptTest
     
     public void testRenaming() throws Exception
     {
-       JSONObject page;
+       JsonNode page;
        String name;
        String name2;
 
@@ -539,32 +541,32 @@ public class WikiRestApiTest extends BaseWebScriptTest
        // Create a page
        page = createOrUpdatePage(PAGE_TITLE_TWO, PAGE_CONTENTS_ONE, null, Status.STATUS_OK);
        name = PAGE_TITLE_TWO.replace(' ', '_');
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("title"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("title"));
        
        
        // Fetch it and check
        page = getPage(name, Status.STATUS_OK);
-       assertEquals(name, page.getString("name"));
-       assertEquals(PAGE_TITLE_TWO, page.getString("title"));
+       assertEquals(name, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_TWO, page.get("title").textValue());
        
        
        // Have it renamed
        page = renamePage(PAGE_TITLE_TWO, PAGE_TITLE_THREE, Status.STATUS_OK);
        name2 = PAGE_TITLE_THREE.replace(' ', '_');
-       assertEquals(PAGE_TITLE_THREE, page.getString("title"));
+       assertEquals(PAGE_TITLE_THREE, page.get("title").textValue());
        
        
        // Fetch it at the new address
        page = getPage(name2, Status.STATUS_OK);
-       assertEquals(name2, page.getString("name"));
-       assertEquals(PAGE_TITLE_THREE, page.getString("title"));
+       assertEquals(name2, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_THREE, page.get("title").textValue());
        
        
        // Get the old one, and ensure we see the "has been moved"
        page = getPage(name, Status.STATUS_OK);
-       assertEquals(name, page.getString("name"));
-       assertEquals(PAGE_TITLE_TWO, page.getString("title"));
-       assertEquals("This page has been moved [["+PAGE_TITLE_THREE+"|here]].", page.getString("pagetext"));
+       assertEquals(name, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_TWO, page.get("title").textValue());
+       assertEquals("This page has been moved [["+PAGE_TITLE_THREE+"|here]].", page.get("pagetext").textValue());
        
        
        // Ensure you can't rename onto an existing page
@@ -576,28 +578,28 @@ public class WikiRestApiTest extends BaseWebScriptTest
        
        // Check that the pages weren't changed
        page = getPage(name2, Status.STATUS_OK);
-       assertEquals(name2, page.getString("name"));
-       assertEquals(PAGE_TITLE_THREE, page.getString("title"));
+       assertEquals(name2, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_THREE, page.get("title").textValue());
        
        page = getPage(name1, Status.STATUS_OK);
-       assertEquals(name1, page.getString("name"));
-       assertEquals(PAGE_TITLE_ONE, page.getString("title"));
+       assertEquals(name1, page.get("name").textValue());
+       assertEquals(PAGE_TITLE_ONE, page.get("title").textValue());
     }
     
     public void testRenamePageWithEmptyTitle() throws Exception
     {
-        JSONObject page;
+        JsonNode page;
         String name = System.currentTimeMillis()+"";
         String name2 = System.currentTimeMillis()+1+"";
         
         // Create a page
         page = createOrUpdatePage(name, name, null, Status.STATUS_OK);
-        assertEquals("Incorrect JSON: " + page.toString(), true, page.has("title"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("title"));
         
      // Fetch it and check
         page = getPage(name, Status.STATUS_OK);
-        assertEquals(name, page.getString("name"));
-        assertEquals(name, page.getString("title"));
+        assertEquals(name, page.get("name").textValue());
+        assertEquals(name, page.get("title").textValue());
         
         //update title
         SiteInfo site = siteService.getSite(SITE_SHORT_NAME_WIKI);
@@ -607,59 +609,59 @@ public class WikiRestApiTest extends BaseWebScriptTest
         
      // Fetch it and check
         page = getPage(name, Status.STATUS_OK);
-        JSONArray versions = page.getJSONArray("versionhistory");
+        ArrayNode versions = (ArrayNode) page.get("versionhistory");
         
-        int maxVersionIndex = versions.length()-1;
-        double vNum = Double.parseDouble(versions.getJSONObject(maxVersionIndex).getString("version"));
-        String newTitle =versions.getJSONObject(maxVersionIndex).getString("title");
-        for (int i = versions.length()-2; i>=0; i--)
+        int maxVersionIndex = versions.size()-1;
+        double vNum = Double.parseDouble(versions.get(maxVersionIndex).get("version").textValue());
+        String newTitle =versions.get(maxVersionIndex).get("title").textValue();
+        for (int i = versions.size()-2; i>=0; i--)
         {
-            JSONObject version = versions.getJSONObject(i);
-            String ver = version.getString("version");
+            JsonNode version = versions.get(i);
+            String ver = version.get("version").textValue();
             if (Double.parseDouble(ver)>vNum)
             {
                 maxVersionIndex = i;
                 vNum = Double.parseDouble(ver);
-                newTitle =versions.getJSONObject(maxVersionIndex).getString("title");
+                newTitle =versions.get(maxVersionIndex).get("title").textValue();
             }
         }
-        assertEquals(name, page.getString("name"));
+        assertEquals(name, page.get("name").textValue());
         assertEquals("", newTitle);
         
         renamePage(name, name2, Status.STATUS_OK);
         
         // Fetch it at the new address
         page = getPage(name2, Status.STATUS_OK);
-        assertEquals(name2, page.getString("name"));
-        assertEquals(name2, page.getString("title"));
+        assertEquals(name2, page.get("name").textValue());
+        assertEquals(name2, page.get("title").textValue());
     }
     
     public void testVersioning() throws Exception
     {
        WikiPageInfo wikiInfo;
-       JSONObject page;
-       JSONArray versions;
+       JsonNode page;
+       ArrayNode versions;
        String name;
        
        // Create a page
        page = createOrUpdatePage(PAGE_TITLE_TWO, PAGE_CONTENTS_ONE, null, Status.STATUS_OK);
        name = PAGE_TITLE_TWO.replace(' ', '_');
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("title"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("title"));
 
        
        // Check it was versioned by default
        wikiInfo = wikiService.getWikiPage(SITE_SHORT_NAME_WIKI, name);
        assertNotNull(wikiInfo);
-       assertEquals(true, nodeService.hasAspect(wikiInfo.getNodeRef(), ContentModel.ASPECT_VERSIONABLE));
+        assertTrue(nodeService.hasAspect(wikiInfo.getNodeRef(), ContentModel.ASPECT_VERSIONABLE));
      
        // Check the JSON for versioning
        page = getPage(name, Status.STATUS_OK);
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("versionhistory"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("versionhistory"));
        
-       versions = page.getJSONArray("versionhistory");
-       assertEquals(1, versions.length());
-       assertEquals("1.0",    versions.getJSONObject(0).get("version"));
-       assertEquals(USER_ONE, versions.getJSONObject(0).get("author"));
+       versions = (ArrayNode) page.get("versionhistory");
+       assertEquals(1, versions.size());
+       assertEquals("1.0",    versions.get(0).get("version").asText());
+       assertEquals(USER_ONE, versions.get(0).get("author").textValue());
        
        
        // Fetch it at this version
@@ -676,14 +678,14 @@ public class WikiRestApiTest extends BaseWebScriptTest
        page = createOrUpdatePage(PAGE_TITLE_TWO, PAGE_CONTENTS_CHANGED, "1.0", Status.STATUS_OK);
        
        page = getPage(name, Status.STATUS_OK);
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("versionhistory"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("versionhistory"));
        
-       versions = page.getJSONArray("versionhistory");
-       assertEquals(2, versions.length());
-       assertEquals("1.1",    versions.getJSONObject(0).get("version"));
-       assertEquals(USER_ONE, versions.getJSONObject(0).get("author"));
-       assertEquals("1.0",    versions.getJSONObject(1).get("version"));
-       assertEquals(USER_ONE, versions.getJSONObject(1).get("author"));
+       versions = (ArrayNode) page.get("versionhistory");
+       assertEquals(2, versions.size());
+       assertEquals("1.1",    versions.get(0).get("version").asText());
+       assertEquals(USER_ONE, versions.get(0).get("author").textValue());
+       assertEquals("1.0",    versions.get(1).get("version").asText());
+       assertEquals(USER_ONE, versions.get(1).get("author").textValue());
        
        
        // Check the version contents
@@ -698,16 +700,16 @@ public class WikiRestApiTest extends BaseWebScriptTest
        page = createOrUpdatePage(PAGE_TITLE_TWO, PAGE_CONTENTS_CHANGED3, "force", Status.STATUS_OK);
        
        page = getPage(name, Status.STATUS_OK);
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("versionhistory"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("versionhistory"));
        
-       versions = page.getJSONArray("versionhistory");
-       assertEquals(3, versions.length());
-       assertEquals("1.2",    versions.getJSONObject(0).get("version"));
-       assertEquals(USER_ONE, versions.getJSONObject(0).get("author"));
-       assertEquals("1.1",    versions.getJSONObject(1).get("version"));
-       assertEquals(USER_ONE, versions.getJSONObject(1).get("author"));
-       assertEquals("1.0",    versions.getJSONObject(2).get("version"));
-       assertEquals(USER_ONE, versions.getJSONObject(2).get("author"));
+       versions = (ArrayNode) page.get("versionhistory");
+       assertEquals(3, versions.size());
+       assertEquals("1.2",    versions.get(0).get("version").asText());
+       assertEquals(USER_ONE, versions.get(0).get("author").textValue());
+       assertEquals("1.1",    versions.get(1).get("version").asText());
+       assertEquals(USER_ONE, versions.get(1).get("author").textValue());
+       assertEquals("1.0",    versions.get(2).get("version").asText());
+       assertEquals(USER_ONE, versions.get(2).get("author").textValue());
        
        // Check the version contents
        content = getPageAtVersion(name, "1.2", Status.STATUS_OK);
@@ -724,52 +726,52 @@ public class WikiRestApiTest extends BaseWebScriptTest
     
     public void testLinks() throws Exception
     {
-       JSONObject page;
-       JSONArray links;
+       JsonNode page;
+       ArrayNode links;
        String name;
        String name2;
        
        // Create a page with no links
        page = createOrUpdatePage(PAGE_TITLE_TWO, PAGE_CONTENTS_TWO, null, Status.STATUS_OK);
        name = PAGE_TITLE_TWO.replace(' ', '_');
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("title"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("title"));
        
        
        // Check, won't have any links shown
        page = getPage(name, Status.STATUS_OK);
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("links"));
-       links = page.getJSONArray("links");
-       assertEquals(0, links.length());
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("links"));
+       links = (ArrayNode) page.get("links");
+       assertEquals(0, links.size());
        
        
        // Create a page with links
        // Should have links to pages 1 and 2
        page = createOrUpdatePage(PAGE_TITLE_THREE, PAGE_CONTENTS_LINK, null, Status.STATUS_OK);
        name2 = PAGE_TITLE_THREE.replace(' ', '_');
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("title"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("title"));
        
        // Check 
        page = getPage(name2, Status.STATUS_OK);
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("links"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("links"));
        
-       links = page.getJSONArray("links");
-       assertEquals(3, links.length());
-       assertEquals(PAGE_TITLE_ONE, links.getString(0));
-       assertEquals(name,      links.getString(1));
-       assertEquals("Invalid", links.getString(2));
-       
+       links = (ArrayNode) page.get("links");
+       assertEquals(3, links.size());
+       assertEquals(PAGE_TITLE_ONE, links.get(0).textValue());
+       assertEquals(name,      links.get(1).textValue());
+        assertEquals("Invalid", links.get(2).textValue());
+
        
        // Create the 1st page, now change
        page = createOrUpdatePage(PAGE_TITLE_ONE, PAGE_CONTENTS_ONE, null, Status.STATUS_OK);
        
        page = getPage(name2, Status.STATUS_OK);
-       assertEquals("Incorrect JSON: " + page.toString(), true, page.has("links"));
+        assertTrue("Incorrect JSON: " + page.toString(), page.has("links"));
        
-       links = page.getJSONArray("links");
-       assertEquals(3, links.length());
-       assertEquals(PAGE_TITLE_ONE, links.getString(0));
-       assertEquals(name,      links.getString(1));
-       assertEquals("Invalid", links.getString(2));
+       links = (ArrayNode) page.get("links");
+       assertEquals(3, links.size());
+       assertEquals(PAGE_TITLE_ONE, links.get(0).textValue());
+       assertEquals(name,      links.get(1).textValue());
+       assertEquals("Invalid", links.get(2).textValue());
     }
     
     /**
@@ -777,13 +779,13 @@ public class WikiRestApiTest extends BaseWebScriptTest
      */
     public void testOverallListing() throws Exception
     {
-       JSONObject pages;
-       JSONArray entries;
+       JsonNode pages;
+       ArrayNode entries;
        
        // Initially, there are no events
        pages = getPages(null, null);
-       assertEquals("Incorrect JSON: " + pages.toString(), true, pages.has("totalPages"));
-       assertEquals(0, pages.getInt("totalPages"));
+        assertTrue("Incorrect JSON: " + pages.toString(), pages.has("totalPages"));
+       assertEquals(0, pages.get("totalPages").intValue());
        
        
        // Add two links to get started with
@@ -794,19 +796,19 @@ public class WikiRestApiTest extends BaseWebScriptTest
        pages = getPages(null, null);
        
        // Should have two links
-       assertEquals("Incorrect JSON: " + pages.toString(), true, pages.has("totalPages"));
-       assertEquals(2, pages.getInt("totalPages"));
+        assertTrue("Incorrect JSON: " + pages.toString(), pages.has("totalPages"));
+       assertEquals(2, pages.get("totalPages").intValue());
      
-       entries = pages.getJSONArray("pages");
-       assertEquals(2, entries.length());
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(2, entries.size());
        // Sorted by newest created first
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(1).getString("title"));
+       assertEquals(PAGE_TITLE_TWO, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(1).get("title").textValue());
        
        
        // Add a third, which is internal, and created by the other user
        this.authenticationComponent.setCurrentUser(USER_TWO);
-       JSONObject page3 = createOrUpdatePage(PAGE_TITLE_THREE, PAGE_CONTENTS_THREE, null, Status.STATUS_OK);
+       JsonNode page3 = createOrUpdatePage(PAGE_TITLE_THREE, PAGE_CONTENTS_THREE, null, Status.STATUS_OK);
        String name3 = PAGE_TITLE_THREE.replace(' ', '_');
        createOrUpdatePage(PAGE_TITLE_THREE, "UD"+PAGE_CONTENTS_THREE, null, Status.STATUS_OK);
        this.authenticationComponent.setCurrentUser(USER_ONE);
@@ -814,70 +816,70 @@ public class WikiRestApiTest extends BaseWebScriptTest
        
        // Check now, should have three links
        pages = getPages(null, null);
-       assertEquals(3, pages.getInt("totalPages"));
+       assertEquals(3, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(3, entries.length());
-       assertEquals(PAGE_TITLE_THREE, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(1).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(2).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(3, entries.size());
+       assertEquals(PAGE_TITLE_THREE, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_TWO, entries.get(1).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(2).get("title").textValue());
        
        
        // Ask for filtering by user
        pages = getPages(null, USER_ONE);
-       assertEquals(2, pages.getInt("totalPages"));
+       assertEquals(2, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(2, entries.length());
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(1).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(2, entries.size());
+       assertEquals(PAGE_TITLE_TWO, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(1).get("title").textValue());
        
        pages = getPages(null, USER_TWO);
-       assertEquals(1, pages.getInt("totalPages"));
+       assertEquals(1, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(1, entries.length());
-       assertEquals(PAGE_TITLE_THREE, entries.getJSONObject(0).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(1, entries.size());
+       assertEquals(PAGE_TITLE_THREE, entries.get(0).get("title").textValue());
 
        
        
        // Ask for filtering by recently added docs
        pages = getPages("recentlyAdded", null);
-       assertEquals(3, pages.getInt("totalPages"));
+       assertEquals(3, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(3, entries.length());
-       assertEquals(PAGE_TITLE_THREE, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(1).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(2).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(3, entries.size());
+       assertEquals(PAGE_TITLE_THREE, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_TWO, entries.get(1).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(2).get("title").textValue());
        
        // Push one back into the past
        pushPageCreatedDateBack(name3, 10);
        
        pages = getPages("recentlyAdded", null);
-       assertEquals(2, pages.getInt("totalPages"));
+       assertEquals(2, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(2, entries.length());
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(1).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(2, entries.size());
+       assertEquals(PAGE_TITLE_TWO, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(1).get("title").textValue());
        
        
        // Now for recently modified ones
        pages = getPages("recentlyModified", null);
-       assertEquals(3, pages.getInt("totalPages"));
+       assertEquals(3, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(3, entries.length());
-       assertEquals(PAGE_TITLE_THREE, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(1).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(2).getString("title"));
-//       assertEquals(PAGE_TITLE_THREE, entries.getJSONObject(2).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(3, entries.size());
+       assertEquals(PAGE_TITLE_THREE, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_TWO, entries.get(1).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(2).get("title").textValue());
+//       assertEquals(PAGE_TITLE_THREE, entries.getJsonNode(2).getString("title"));
        
        
        // Change the owner+creator of one of the pages to System, ensure that 
        //  this doesn't break anything in the process
-       String pageTwoName = entries.getJSONObject(1).getString("name");
+       String pageTwoName = entries.get(1).get("name").textValue();
        WikiPageInfo pageTwo = wikiService.getWikiPage(SITE_SHORT_NAME_WIKI, pageTwoName);
        nodeService.setProperty(pageTwo.getNodeRef(), ContentModel.PROP_OWNER, AuthenticationUtil.SYSTEM_USER_NAME);
        nodeService.setProperty(pageTwo.getNodeRef(), ContentModel.PROP_CREATOR, AuthenticationUtil.SYSTEM_USER_NAME);
@@ -885,13 +887,13 @@ public class WikiRestApiTest extends BaseWebScriptTest
        
        // Check the listing still works (note - order will have changed)
        pages = getPages("recentlyModified", null);
-       assertEquals(3, pages.getInt("totalPages"));
+       assertEquals(3, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(3, entries.length());
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_THREE, entries.getJSONObject(1).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(2).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(3, entries.size());
+       assertEquals(PAGE_TITLE_TWO, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_THREE, entries.get(1).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(2).get("title").textValue());
 
        
        // Delete User Two, who owns the 3rd page, and ensure that this
@@ -902,13 +904,13 @@ public class WikiRestApiTest extends BaseWebScriptTest
        
        // Check the listing still works
        pages = getPages("recentlyModified", null);
-       assertEquals(3, pages.getInt("totalPages"));
+       assertEquals(3, pages.get("totalPages").intValue());
        
-       entries = pages.getJSONArray("pages");
-       assertEquals(3, entries.length());
-       assertEquals(PAGE_TITLE_TWO, entries.getJSONObject(0).getString("title"));
-       assertEquals(PAGE_TITLE_THREE, entries.getJSONObject(1).getString("title"));
-       assertEquals(PAGE_TITLE_ONE, entries.getJSONObject(2).getString("title"));
+       entries = (ArrayNode) pages.get("pages");
+       assertEquals(3, entries.size());
+       assertEquals(PAGE_TITLE_TWO, entries.get(0).get("title").textValue());
+       assertEquals(PAGE_TITLE_THREE, entries.get(1).get("title").textValue());
+       assertEquals(PAGE_TITLE_ONE, entries.get(2).get("title").textValue());
 
        
        // Now hide the site, and remove the user from it, won't be allowed to see it
@@ -951,10 +953,10 @@ public class WikiRestApiTest extends BaseWebScriptTest
             String uri = "/slingshot/wiki/page/" + SITE_SHORT_NAME_WIKI + "/Main_Page?alf_ticket=" + mas.getCurrentTicket() + "application/json";
 
             Response responseManagerRole = sendRequest(new GetRequest(uri), 404);
-            JSONObject resultManagerRole = new JSONObject(responseManagerRole.getContentAsString());
-            JSONObject permissionsManagerRole = resultManagerRole.getJSONObject("permissions");
-            assertTrue(permissionsManagerRole.getBoolean("create"));
-            assertTrue(permissionsManagerRole.getBoolean("edit"));
+            JsonNode resultManagerRole = AlfrescoDefaultObjectMapper.getReader().readTree(responseManagerRole.getContentAsString());
+            JsonNode permissionsManagerRole = resultManagerRole.get("permissions");
+            assertTrue(permissionsManagerRole.get("create").booleanValue());
+            assertTrue(permissionsManagerRole.get("edit").booleanValue());
 
             // admin authentication
             this.authenticationComponent.setCurrentUser(AuthenticationUtil.getAdminUserName());
@@ -966,10 +968,10 @@ public class WikiRestApiTest extends BaseWebScriptTest
             this.authenticationComponent.setCurrentUser(user);
 
             Response responseConsumerRole = sendRequest(new GetRequest(uri), 404);
-            JSONObject resultConsumerRole = new JSONObject(responseConsumerRole.getContentAsString());
-            JSONObject permissionsConsumerRole = resultConsumerRole.getJSONObject("permissions");
-            assertFalse(permissionsConsumerRole.getBoolean("create"));
-            assertFalse(permissionsConsumerRole.getBoolean("edit"));
+            JsonNode resultConsumerRole = AlfrescoDefaultObjectMapper.getReader().readTree(responseConsumerRole.getContentAsString());
+            JsonNode permissionsConsumerRole = resultConsumerRole.get("permissions");
+            assertFalse(permissionsConsumerRole.get("create").booleanValue());
+            assertFalse(permissionsConsumerRole.get("edit").booleanValue());
         }
         finally
         {

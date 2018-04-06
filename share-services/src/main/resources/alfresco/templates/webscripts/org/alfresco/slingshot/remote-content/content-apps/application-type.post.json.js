@@ -19,15 +19,16 @@ function main() {
       // Get the page name and JSON definition from the request parameters...
       var valid = true;
       var name = json.get("name");
-      if (name == null || name == "")
+      if (name == null || name.textValue() == null || name == "")
       {
          status.code = 500;
          model.errorMessage = "appType.create.error.noNameProvided";
          return false;
       }
+      name = name.textValue();
 
       var rootPage = json.get("rootPage");
-      if (rootPage == null || rootPage == "")
+      if (rootPage == null || rootPage.textValue() == null || rootPage == "")
       {
          status.code = 500;
          model.errorMessage = "appType.create.error.noRootPageProvided";
@@ -35,6 +36,7 @@ function main() {
       }
       else
       {
+         rootPage = rootPage.textValue();
          // Check that the requested root page exists...
          alfQuery = 'TYPE:"{http://www.alfresco.org/model/surf/1.0}amdpage"' +
                  ' AND PATH:"/app:company_home/app:dictionary//*"' +

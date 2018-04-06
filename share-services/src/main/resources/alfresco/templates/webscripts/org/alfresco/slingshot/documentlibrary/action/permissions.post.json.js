@@ -83,11 +83,11 @@ function runAction(p_params)
                   var permissions = [];
                   for (var i = 0, j = jsonPermissions.length; i < j; i++)
                   {
-                     permissions[jsonPermissions[i].get("group")] = String(jsonPermissions[i].get("role"));
+                     permissions[jsonPermissions[i].get("group").textValue()] = String(jsonPermissions[i].get("role").textValue());
                      
                      // It is not allowed for a user to increase access for "All Other Users" on a non-public site.
                      // This is because the site cannot be accessed until the user has been invited to join the site
-                     if (jsonPermissions[i].get("group") == "GROUP_EVERYONE" && !site.isPublic)
+                     if (jsonPermissions[i].get("group").textValue() == "GROUP_EVERYONE" && !site.isPublic)
                      {
                         result.success = false;
                         status.setCode(status.STATUS_BAD_REQUEST, "Cannot give permissions to all other users on non-public site");

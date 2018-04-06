@@ -25,6 +25,8 @@
  */
 package org.alfresco.slingshot.documentlibrary;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,8 +48,7 @@ import org.alfresco.service.cmr.search.SearchService;
 import org.alfresco.service.namespace.QName;
 import org.alfresco.service.transaction.TransactionService;
 import org.alfresco.util.GUID;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
+import org.alfresco.util.json.jackson.AlfrescoDefaultObjectMapper;
 import org.springframework.extensions.webscripts.Status;
 import org.springframework.extensions.webscripts.TestWebScriptServer.PostRequest;
 import org.springframework.extensions.webscripts.TestWebScriptServer.Response;
@@ -125,7 +126,7 @@ public class FolderTemplateTest  extends BaseWebScriptTest
         String newDescription = "FolderDescription" + GUID.generate();
         String newTitle = "FolderTitle" + GUID.generate();
         
-        JSONObject body = new JSONObject();
+        ObjectNode body = AlfrescoDefaultObjectMapper.createObjectNode();
         body.put("sourceNodeRef", template.toString());
         body.put("parentNodeRef", destination.toString());
         body.put("prop_cm_name", newName);
@@ -153,13 +154,10 @@ public class FolderTemplateTest  extends BaseWebScriptTest
         assertEquals("The folder's title should be " + newTitle +
                 ", but was " + newFolder.getProperties().get(ContentModel.PROP_TITLE),
                 newTitle, newFolder.getProperties().get(ContentModel.PROP_TITLE));
-        
+
         // check the response
-        JSONParser jsonParser = new JSONParser();
-        Object contentJsonObject = jsonParser.parse(response
-                .getContentAsString());
-        JSONObject jsonData = (JSONObject) contentJsonObject;
-        String persistedObject = (String) jsonData.get("persistedObject");
+        JsonNode jsonData = AlfrescoDefaultObjectMapper.getReader().readTree(response.getContentAsString());
+        String persistedObject = jsonData.get("persistedObject").textValue();
         assertEquals("The response's persistedObject should be "
                 + newFolder.getNodeRef().toString() + " but it was "
                 + persistedObject, newFolder.getNodeRef().toString(),

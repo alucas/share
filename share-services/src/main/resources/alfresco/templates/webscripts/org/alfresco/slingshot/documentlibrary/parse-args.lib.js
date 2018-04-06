@@ -474,11 +474,11 @@ var ParseArgs =
          // Was a JSON parameter list supplied?
          if (typeof json == "object")
          {
-            if (!json.isNull(param))
+            if (json.has(param))
             {
                var jsonValues = json.get(param);
                // Convert from JSONArray to JavaScript array
-               for (var i = 0, j = jsonValues.length(); i < j; i++)
+               for (var i = 0, j = jsonValues.size(); i < j; i++)
                {
                   values.push(jsonValues.get(i));
                }

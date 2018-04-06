@@ -40,7 +40,7 @@ function main()
    // See MNT-11725
    if (json.has("isInherited"))
    {
-      var isInherited = json.getBoolean("isInherited");
+      var isInherited = json.get("isInherited").booleanValue();
       if (location.site != null)
       {
          if (isInherited == false)
@@ -52,20 +52,20 @@ function main()
       node.setInheritsPermissions(isInherited);
    }
    
-   var permissions = json.getJSONArray("permissions");
-   var isInherited = json.getBoolean("isInherited");
-   for (var i = 0; i < permissions.length(); i++)
+   var permissions = json.get("permissions");
+   var isInherited = json.get("isInherited").booleanValue();
+   for (var i = 0; i < permissions.size(); i++)
    {
-      var perm = permissions.getJSONObject(i);
+      var perm = permissions.get(i);
       
       // collect values for the permission setting
-      var authority = perm.getString("authority");
+      var authority = perm.get("authority").textValue();
       
-      var role = perm.getString("role");
+      var role = perm.get("role").textValue();
       var remove = false;
       if (perm.has("remove"))
       {
-         remove = perm.getBoolean("remove");
+         remove = perm.get("remove").booleanValue();
       }
       
       // Apply or remove permission

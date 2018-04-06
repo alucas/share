@@ -25,6 +25,8 @@
  */
 package org.alfresco.repo.web.scripts.wiki;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,8 +39,6 @@ import org.alfresco.service.cmr.version.Version;
 import org.alfresco.service.cmr.version.VersionService;
 import org.alfresco.service.cmr.wiki.WikiPageInfo;
 import org.alfresco.service.namespace.QName;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 import org.springframework.extensions.webscripts.Cache;
 import org.springframework.extensions.webscripts.Status;
 import org.springframework.extensions.webscripts.WebScriptException;
@@ -64,19 +64,20 @@ public class WikiPagePut extends AbstractWikiWebScript
 
    @Override
    protected Map<String, Object> executeImpl(SiteInfo site, String pageTitle,
-         WebScriptRequest req, JSONObject json, Status status, Cache cache) 
+                                             WebScriptRequest req, JsonNode json,
+                                             Status status, Cache cache)
    {
       Map<String, Object> model = new HashMap<>();
       
       // Grab the details of the change
       // Fetch the contents
-      String contents = (String)json.get("pagecontent");
+      String contents = json.get("pagecontent").textValue();
       
       // Fetch the title, used only when creating
       String title;
-      if (json.containsKey("title"))
+      if (json.has("title"))
       {
-         title = (String)json.get("title");
+         title = json.get("title").textValue();
       }
       else
       {
@@ -84,25 +85,25 @@ public class WikiPagePut extends AbstractWikiWebScript
       }
       
       // Fetch the versioning details
-      boolean forceSave = json.containsKey("forceSave");
+      boolean forceSave = json.has("forceSave");
       String currentVersion = null;
-      if (json.containsKey("currentVersion"))
+      if (json.has("currentVersion"))
       {
-         currentVersion = (String)json.get("currentVersion");
+         currentVersion = json.get("currentVersion").textValue();
       }
       
       // Fetch the tags, if given
       List<String> tags = null;
-      if (json.containsKey("tags"))
+      if (json.has("tags"))
       {
          tags = new ArrayList<>();
-         if (!json.get("tags").equals(""))
+         if (!("").equals(json.get("tags").textValue()))
          {
             // Array of tags
-            JSONArray tagsA = (JSONArray)json.get("tags");
+            ArrayNode tagsA = (ArrayNode) json.get("tags");
             for (int i=0; i<tagsA.size(); i++)
             {
-               tags.add((String)tagsA.get(i));
+               tags.add(tagsA.get(i).textValue());
             }
          }
       }
