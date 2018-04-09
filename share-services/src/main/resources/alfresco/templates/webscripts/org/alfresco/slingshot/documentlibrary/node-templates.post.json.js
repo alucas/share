@@ -19,8 +19,8 @@ function main()
    }
    
    // get the nodes and perform the copy - permission failures etc. will produce a status code response
-   var sourceNode = search.findNode(sourceNodeRef),
-       parentNode = search.findNode(parentNodeRef);
+   var sourceNode = search.findNode(sourceNodeRef.textValue()),
+       parentNode = search.findNode(parentNodeRef.textValue());
    if (sourceNode == null || parentNode == null)
    {
       status.setCode(status.STATUS_NOT_FOUND, "Source or destination node is missing for copy operation.");
