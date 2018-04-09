@@ -32,7 +32,7 @@ function postActivity()
       status.setCode(status.STATUS_BAD_REQUEST, "Activity 'type' parameter missing when posting activity");
       return;
    }
-
+   type = type.textValue();
    /*
     * Site
     */
@@ -42,6 +42,7 @@ function postActivity()
       status.setCode(status.STATUS_BAD_REQUEST, "'site' parameter missing when posting activity");
       return;
    }
+   siteId = siteId.textValue();
    var site = siteService.getSite(siteId);
    if (site == null)
    {
