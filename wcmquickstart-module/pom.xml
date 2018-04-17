@@ -19,8 +19,6 @@
     <name>Alfresco WCMQS Parent</name>
     <modules>
         <module>wcmquickstartclientapi</module>
-        <module>wcmquickstartmodule</module>
-        <module>wcmquickstartsharemodule</module>
         <module>wcmquickstartwebsite</module>
     </modules>
 </project>
